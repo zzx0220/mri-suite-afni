@@ -32,14 +32,14 @@ Open *XLaunch* and select the wanted window type. **Disable access control** and
 #### If use WSL2
 Open the windows powershell. Do `ipconfig` to find the IPv4 address of the WSL. Do
 ```
-docker run --rm -it DISPLAY=IP_address:0.0 image_name:tag
+docker run --rm -it -e DISPLAY=IP_address:0.0 image_name:tag
 ```
 to entry the bash. Now `afni` can open the GUIS.
 
 #### If use WSL1
 *Not tested*:
 ```
-docker run --rm -it DISPLAY=:0.0 image_name:tag
+docker run --rm -it -e DISPLAY=:0.0 image_name:tag
 ```
 
 # Useful commands
