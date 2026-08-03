@@ -31,7 +31,7 @@ libnode-dev libudunits2-dev
 # Install AFNI binaries
 RUN cd
 RUN curl -O https://afni.nimh.nih.gov/pub/dist/bin/misc/@update.afni.binaries
-RUN tcsh @update.afni.binaries -package linux_ubuntu_24_64 -do_extras
+RUN tcsh @update.afni.binaries -package linux_ubuntu_24_ARM -do_extras
 RUN echo  'export PATH=$HOME/abin/:$PATH' >> ~/.bashrc
 RUN echo  'export PATH=$HOME/abin/:$PATH' >> ~/.cshrc
 
