@@ -1,75 +1,116 @@
-# General description
-This MRI_suite is for MRI data processing and analysis with AFNI.
+# MRI Suite for AFNI
 
-With this suite, one could run analysis on different platforms, macOS, linux or windows. 
+A Docker-based environment for MRI data processing and analysis with [AFNI](https://afni.nimh.nih.gov/). 
 
-To begin with, one should build the image or directly pull the pre-built image. Several settings need to be fixed for specific aims (see below).
 
-# Pull and push
-Use the github workflow to automatically build the image after push to the github repository. 
+## Building
 
-# Mount local data
-Usually we want to mount local data to the container, set this when run this image by
+The correct `Dockerfile` depends on your CPU architecture:
+
+| Platform | Architecture | Dockerfile |
+| --- | --- | --- |
+| Windows | amd64 | `Dockerfile` |
+| macOS (Intel) | amd64 | `Dockerfile` |
+| macOS (M-series chips) | arm64 | `Dockerfile_arm64` |
+
+**macOS with Apple Silicon (arm64):**
+
+```bash
+# with Docker
+docker build -t mri_suite_afni:latest .
+
+# with Apple Container
+container build -t mri_suite_afni:latest .
 ```
+
+> **Tip:** Give the builder enough memory. Low memory during the build can fail the R package setup. For example, with Apple Container:
+>
+> ```bash
+> container builder start --memory 8g
+> ```
+
+**Cross-build an amd64 image on Apple Silicon:**
+
+You can build the amd64 image with the common `Dockerfile` on M-series chips by specifying the platform:
+
+```bash
+docker build --platform linux/amd64 -t mri_suite_afni_amd64:latest .
+```
+
+---
+
+## Mounting data
+
+To make local data available inside the container, mount it at run time:
+
+```bash
 docker run -v local_path:container_path image_name
 ```
-Here `-v` sets the to be mounted *local path* to the *container path* so we could find the local files in the container path. 
 
-# Open GUI apps
-Some applications have GUIS, such as AFNI, and we need to operate based on the GUI, so it is usually necessary to construct an environment where we can open the GUIS. Generally we use X11 servers on the local computers to receives the graphical outputs from the containers, so we could open the GUIs as our local applications. 
+Here `-v` maps the *local path* to the *container path*, so files on your machine can be found at `container_path` inside the container.
 
-## For windows
-### Use MobaXterm
-Download [MobaXterm](https://mobaxterm.mobatek.net/) and the [docker desktop for windows](https://www.docker.com/products/docker-desktop/).
+The image also includes `sshfs`, so you can mount remote servers inside the container as well.
 
-Setup the MobaXterm following this [instruction](https://www.rootisgod.com/2021/Running-Linux-Desktop-Apps-From-a-Docker-Container-on-Windows-with-MobaXterm/).
+---
 
-### Use VcXsrv
-Download [VcXsrv](https://sourceforge.net/projects/vcxsrv/files/latest/download) and the [docker desktop for windows](https://www.docker.com/products/docker-desktop/).
+## Opening GUI apps
 
-Open *XLaunch* and select the wanted window type. **Disable access control** and **Off the native opengl**.
+Some applications (such as AFNI) have GUIs. To use them, you need a way to display the container's graphical output on your local machine. This is usually done with an **X11 server** running on the host, plus a `DISPLAY` environment variable that tells the container which IP address to send the graphics to.
 
-#### If use WSL2
-Open the windows powershell. Do `ipconfig` to find the IPv4 address of the WSL. Do
-```
+### macOS
+
+Install an X server such as [XQuartz](https://www.xquartz.org/).
+
+When running or creating a container, pass the `DISPLAY` variable:
+
+- **Docker:** `-e DISPLAY=host.docker.internal:0`
+- **Apple Container:** `-e DISPLAY=192.168.64.1:0` (a common practice)
+
+To open the AFNI GUI:
+
+1. Start XQuartz, then allow connections from the container host:
+   ```bash
+   xhost + $(hostname)
+   ```
+2. Run or exec into the container:
+   ```bash
+   docker run ... -e DISPLAY=... image_name
+   # or, if the container is already running:
+   docker exec -it <container_id> bash
+   ```
+3. Launch AFNI inside the container:
+   ```bash
+   afni
+   ```
+
+### Windows
+
+#### With MobaXterm
+
+Download [MobaXterm](https://mobaxterm.mobatek.net/) and [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/), then set up MobaXterm following this [guide](https://www.rootisgod.com/2021/Running-Linux-Desktop-Apps-From-a-Docker-Container-on-Windows-with-MobaXterm/).
+
+#### With VcXsrv
+
+Download [VcXsrv](https://sourceforge.net/projects/vcxsrv/files/latest/download) and [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/).
+
+Open **XLaunch** and select the window type you want. **Disable access control** and **turn off native OpenGL**.
+
+##### If you use WSL2
+
+In Windows PowerShell, run `ipconfig` to find the IPv4 address of the WSL, then start the container with:
+
+```bash
 docker run --rm -it -e DISPLAY=IP_address:0.0 image_name:tag
 ```
-to entry the bash. Now `afni` can open the GUIS.
 
-#### If use WSL1
-*Not tested*:
-```
+You should now be able to open AFNI GUIs with `afni`.
+
+##### If you use WSL1
+
+*Not tested:*
+
+```bash
 docker run --rm -it -e DISPLAY=:0.0 image_name:tag
 ```
 
-# Useful commands
-To see the helper
-```
-docker build --help
-```
 
-To build an image
-```
-docker build -t mri_suite:0.1 .
-```
-
-To run an iamge
-```
-docker run mri_suite:0.1
-```
-
-To use the bash terminal in the imaged system
-```
-docker run -it mri_suite:0.1
-```
-
-To open the GUI 
-```
-    docker run --rm -ti                  \
-        --user=`id -u`                   \
-        -v /tmp/.X11-unix:/tmp/.X11-unix \
-        -e DISPLAY=${DISPLAY}            \
-        -v ${HOME}:/opt/home             \
-        afni/afni_make_build
-```
-`-v loca_path:docker_path` mount the local paths to the docker
